@@ -10,21 +10,30 @@ NAMESERVERS=`cat /etc/resolv.conf | grep ^nameserver | cut -d " " -f 2 | sed 's/
 PROVIDERSV4=$(cat "$(dirname "$0")/providers-v4.txt")
 PROVIDERSV6=$(cat "$(dirname "$0")/providers-v6.txt")
 
-# Testing for IPv6
-$dig +short +tries=1 +time=2 +stats @2607:f8b0:4003:c00::6a www.google.com |grep 216.239.38.120 >/dev/null 2>&1
-if [ $? = 0 ]; then
-    hasipv6="true"
+# ANSI color codes
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Testing for IPv6 only if "ipv6" is passed as a parameter
+hasipv6=""
+if [ "x$1" = "xipv6" ]; then
+    if host -t AAAA ipv6.google.com >/dev/null 2>&1; then
+        if curl -6 -s --max-time 2 https://ipv6.google.com >/dev/null 2>&1; then
+            echo "IPv6 connectivity confirmed"
+            hasipv6="true"
+        else
+            echo -e  "${YELLOW}ATTENTION: IPv6 DNS resolution works but connectivity failed. Testing with IPv4 instead. ${NC}"
+        fi
+    else
+        echo "ATTENTION: No IPv6 DNS resolution detected. Testing with IPv4."
+    fi
 fi
 
 providerstotest=$PROVIDERSV4
 
-if [ "x$1" = "xipv6" ]; then
-    if [ "x$hasipv6" = "x" ]; then
-        echo "error: IPv6 support not found. Unable to do the ipv6 test."; exit 1;
-    fi
-    providerstotest=$PROVIDERSV6
-
-elif [ "x$1" = "xipv4" ]; then
+if [ "x$1" = "xipv4" ]; then
     providerstotest=$PROVIDERSV4
 
 elif [ "x$1" = "xall" ]; then
@@ -66,12 +75,6 @@ separator="$separator$(printf "%-8s" "" | tr ' ' '-')"
 
 echo "$header"
 echo "$separator"
-
-# ANSI color codes
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
 
 results=""
 
