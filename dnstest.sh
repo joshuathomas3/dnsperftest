@@ -75,21 +75,32 @@ NC='\033[0m' # No Color
 
 results=""
 
+csv_file="dns_results.csv"
+# Write CSV header
+{
+    printf "DNS Resolver"
+    for ((i=1; i<=totaldomains; i++)); do
+        printf ",test%d" "$i"
+    done
+    printf ",Average\n"
+} > "$csv_file"
+
 for p in $NAMESERVERS $providerstotest; do
     pip=${p%%#*}
     pname=${p##*#}
     ftime=0
     row=$(printf "%-21s" "$pname")
+    csv_row="$pname"
     for d in $DOMAINS2TEST; do
         ttime=`$dig +tries=1 +time=2 +stats @$pip $d |grep "Query time:" | cut -d : -f 2- | cut -d " " -f 2`
         if [ -z "$ttime" ]; then
-            #let's have time out be 1s = 1000ms
             ttime=1000
         elif [ "x$ttime" = "x0" ]; then
             ttime=1
         fi
 
         row="$row$(printf "%-8s" "$ttime ms")"
+        csv_row="$csv_row,$ttime"
         ftime=$((ftime + ttime))
     done
     avg=`bc -l <<< "scale=2; $ftime/$totaldomains"`
@@ -105,13 +116,16 @@ for p in $NAMESERVERS $providerstotest; do
     fi
 
     row="$row  ${color}$(printf "%-8s" "$avg")${NC}"
-    # Store average as the first field for sorting, then the row
+    csv_row="$csv_row,$avg"
     results="$results\n$avg_int|$row"
+    echo "$csv_row" >> "$csv_file"
 done
 
 # Sort by average (first field), then print table rows
 echo -e "$results" | sed '/^$/d' | sort -n -t'|' -k1,1 | cut -d'|' -f2-
 
 echo "$separator"
+
+echo "Results exported to $csv_file"
 
 exit 0;
