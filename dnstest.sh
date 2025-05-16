@@ -7,25 +7,8 @@ command -v bc > /dev/null || { echo "error: bc was not found. Please install bc.
 
 NAMESERVERS=`cat /etc/resolv.conf | grep ^nameserver | cut -d " " -f 2 | sed 's/\(.*\)/&#&/'`
 
-PROVIDERSV4="
-1.1.1.1#cloudflare 
-8.8.8.8#google 
-9.9.9.9#quad9 
-94.140.14.14#adguard
-208.67.222.222#opendns
-185.228.168.9#cleanbrowsing
-76.76.2.0#controld
-"
-
-PROVIDERSV6="
-2606:4700:4700::1111#cloudflare-v6
-2001:4860:4860::8888#google-v6
-2620:fe::fe#quad-9
-2a00:5a60::ad1:0ff#adguard-v6
-2620:0:ccc::2#opendns-v6
-2a0d:2a00:1::2#cleanbrowsing-v6
-2606:1a40::#controld-v6
-"
+PROVIDERSV4=$(cat "$(dirname "$0")/providers-v4.txt")
+PROVIDERSV6=$(cat "$(dirname "$0")/providers-v6.txt")
 
 # Testing for IPv6
 $dig +short +tries=1 +time=2 +stats @2607:f8b0:4003:c00::6a www.google.com |grep 216.239.38.120 >/dev/null 2>&1
@@ -53,16 +36,22 @@ elif [ "x$1" = "xall" ]; then
 else
     providerstotest=$PROVIDERSV4
 fi
-
     
 
 # Domains to test. Duplicated domains are ok
-DOMAINS2TEST="www.google.com www.youtube.com www.facebook.com www.instagram.com chatgpt.com x.com www.whatsapp.com wikipedia.org reddit.com yahoo.co.jp"
+DOMAINS2TEST=$(cat "$(dirname "$0")/domainslist.txt")
 # Most visted sites in the world as of may 2025 according to Similarweb and Semrush
 
 totaldomains=0
 header=""
 separator=""
+
+# Resize terminal if smaller than 19 rows or 113 columns
+rows=$(tput lines)
+cols=$(tput cols)
+if [ "$rows" -lt 19 ] || [ "$cols" -lt 113 ]; then
+    printf '\e[8;19;113t'
+fi
 
 # Add table header for DNS resolver
 header=$(printf "%-21s" "DNS Resolver")
@@ -84,12 +73,13 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+results=""
+
 for p in $NAMESERVERS $providerstotest; do
     pip=${p%%#*}
     pname=${p##*#}
     ftime=0
-
-    printf "%-21s" "$pname"
+    row=$(printf "%-21s" "$pname")
     for d in $DOMAINS2TEST; do
         ttime=`$dig +tries=1 +time=2 +stats @$pip $d |grep "Query time:" | cut -d : -f 2- | cut -d " " -f 2`
         if [ -z "$ttime" ]; then
@@ -99,7 +89,7 @@ for p in $NAMESERVERS $providerstotest; do
             ttime=1
         fi
 
-        printf "%-8s" "$ttime ms"
+        row="$row$(printf "%-8s" "$ttime ms")"
         ftime=$((ftime + ttime))
     done
     avg=`bc -l <<< "scale=2; $ftime/$totaldomains"`
@@ -114,10 +104,14 @@ for p in $NAMESERVERS $providerstotest; do
         color=$RED
     fi
 
-    printf "  ${color}%-8s${NC}\n" "$avg"
+    row="$row  ${color}$(printf "%-8s" "$avg")${NC}"
+    # Store average as the first field for sorting, then the row
+    results="$results\n$avg_int|$row"
 done
 
-echo "$separator"
+# Sort by average (first field), then print table rows
+echo -e "$results" | sed '/^$/d' | sort -n -t'|' -k1,1 | cut -d'|' -f2-
 
+echo "$separator"
 
 exit 0;
