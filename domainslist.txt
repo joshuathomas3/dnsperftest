@@ -1,1 +1,10 @@
-www.google.com www.youtube.com www.facebook.com www.instagram.com chatgpt.com x.com www.whatsapp.com wikipedia.org reddit.com yahoo.co.jp
+www.google.com
+www.youtube.com 
+www.facebook.com 
+www.instagram.com 
+chatgpt.com 
+x.com 
+www.whatsapp.com 
+wikipedia.org 
+reddit.com 
+yahoo.co.jp
