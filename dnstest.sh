@@ -19,15 +19,11 @@ NC='\033[0m' # No Color
 # Testing for IPv6 only if "ipv6" is passed as a parameter
 hasipv6=""
 if [ "x$1" = "xipv6" ]; then
-    if host -t AAAA ipv6.google.com >/dev/null 2>&1; then
-        if curl -6 -s --max-time 2 https://ipv6.google.com >/dev/null 2>&1; then
-            echo "IPv6 connectivity confirmed"
-            hasipv6="true"
-        else
-            echo -e  "${YELLOW}ATTENTION: IPv6 DNS resolution works but connectivity failed. Testing with IPv4 instead. ${NC}"
-        fi
+    if ping6 -c 1 ipv6.google.com &>/dev/null; then
+        echo "IPv6 connectivity confirmed"
+        hasipv6="true"
     else
-        echo "ATTENTION: No IPv6 DNS resolution detected. Testing with IPv4."
+        echo -e  "${YELLOW}ATTENTION: IPv6 DNS resolution works but connectivity failed. Testing with IPv4 instead. ${NC}"
     fi
 fi
 
@@ -49,7 +45,7 @@ fi
 
 # Domains to test. Duplicated domains are ok
 DOMAINS2TEST=$(cat "$(dirname "$0")/domainslist.txt")
-# Most visted sites in the world as of may 2025 according to Similarweb and Semrush
+# Most visted sites in the world as of may 2025 according to Similarweb
 
 totaldomains=0
 header=""
@@ -61,6 +57,9 @@ cols=$(tput cols)
 if [ "$rows" -lt 19 ] || [ "$cols" -lt 113 ]; then
     printf '\e[8;19;113t'
 fi
+
+echo "Clearing DNS cache..."
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
 
 # Add table header for DNS resolver
 header=$(printf "%-21s" "DNS Resolver")
@@ -109,7 +108,7 @@ for p in $NAMESERVERS $providerstotest; do
     avg=`bc -l <<< "scale=2; $ftime/$totaldomains"`
     avg_int=${avg%.*}
 
-    # Colorize average
+    # Colorise average
     if (( avg_int < 20 )); then
         color=$GREEN
     elif (( avg_int < 150 )); then

@@ -1,10 +1,10 @@
 www.google.com
-www.youtube.com 
+www.youtube.com
+www.bbc.co.uk
 www.facebook.com 
-www.instagram.com 
-chatgpt.com 
-x.com 
-www.whatsapp.com 
+www.amazon.co.uk
+reddit.com
+www.google.co.uk
 wikipedia.org 
-reddit.com 
-yahoo.co.jp
+chatgpt.com 
+www.instagram.com
